@@ -3,6 +3,7 @@ const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
 const DoctorAvailability = require('../models/DoctorAvailability');
 const AppError = require('../errors/AppError');
+const notificationService = require('./notification.service');
 const {
   timeToMinutes,
   isIntervalOverlapping,
@@ -19,12 +20,14 @@ class AppointmentService {
 
     // 1. Resolve Patient ID based on authenticated user
     let patientId;
+    let patientUserId;
     if (requestingUser.role === 'PATIENT') {
       const patient = await Patient.findOne({ userId: requestingUser._id });
       if (!patient) {
         throw AppError.notFound('Patient profile not found for this user', 'NOT_FOUND');
       }
       patientId = patient._id;
+      patientUserId = requestingUser._id;
     } else if (['ADMIN', 'RECEPTIONIST'].includes(requestingUser.role)) {
       // Admin/Receptionist can book for a patient if patientId provided
       if (!appointmentData.patientId) {
@@ -35,6 +38,7 @@ class AppointmentService {
         throw AppError.notFound('Patient not found', 'NOT_FOUND');
       }
       patientId = patient._id;
+      patientUserId = patient.userId;
     } else {
       throw AppError.forbidden('Doctors cannot book appointments directly as patients', 'FORBIDDEN');
     }
@@ -144,7 +148,7 @@ class AppointmentService {
 
       await appointment.save();
 
-      return await appointment.populate([
+      const populatedAppointment = await appointment.populate([
         {
           path: 'patientId',
           populate: { path: 'userId', select: 'name email phone' },
@@ -158,6 +162,33 @@ class AppointmentService {
         },
         { path: 'departmentId', select: 'name description' },
       ]);
+
+      // Notify doctor and patient
+      if (doctor.userId) {
+        await notificationService.createNotification({
+          recipient: doctor.userId,
+          type: 'APPOINTMENT_CREATED',
+          message: `New appointment booked for ${date} at ${startTime}.`,
+          relatedEntity: {
+            entityType: 'Appointment',
+            entityId: appointment._id,
+          },
+        });
+      }
+
+      if (patientUserId) {
+        await notificationService.createNotification({
+          recipient: patientUserId,
+          type: 'APPOINTMENT_CREATED',
+          message: `Your appointment has been successfully booked for ${date} from ${startTime} to ${endTime}.`,
+          relatedEntity: {
+            entityType: 'Appointment',
+            entityId: appointment._id,
+          },
+        });
+      }
+
+      return populatedAppointment;
     } catch (err) {
       if (err.code === 11000) {
         throw AppError.conflict(
@@ -252,23 +283,180 @@ class AppointmentService {
   }
 
   /**
-   * Cancel an appointment
+   * Confirm an appointment (BOOKED -> CONFIRMED)
+   * Allowed: Doctor (assigned), Admin, Receptionist
    */
-  async cancelAppointment(appointmentId, reason, requestingUser) {
-    const appointment = await Appointment.findById(appointmentId);
+  async confirmAppointment(appointmentId, requestingUser) {
+    const appointment = await Appointment.findById(appointmentId)
+      .populate('patientId')
+      .populate('doctorId');
+
     if (!appointment) {
       throw AppError.notFound(`Appointment not found with ID: ${appointmentId}`, 'NOT_FOUND');
     }
 
+    // Role authorization
+    if (requestingUser.role === 'DOCTOR') {
+      const doctor = await Doctor.findOne({ userId: requestingUser._id });
+      if (!doctor || appointment.doctorId._id.toString() !== doctor._id.toString()) {
+        throw AppError.forbidden('You can only confirm appointments assigned to you', 'FORBIDDEN');
+      }
+    } else if (!['ADMIN', 'RECEPTIONIST'].includes(requestingUser.role)) {
+      throw AppError.forbidden('Only assigned doctors or administrative staff can confirm appointments', 'FORBIDDEN');
+    }
+
+    // State machine check: BOOKED -> CONFIRMED
+    if (appointment.status !== 'BOOKED') {
+      throw AppError.badRequest(
+        `Cannot confirm appointment with status '${appointment.status}'. Only BOOKED appointments can be confirmed.`,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
+    appointment.status = 'CONFIRMED';
+    await appointment.save();
+
+    // Notify patient
+    if (appointment.patientId && appointment.patientId.userId) {
+      await notificationService.createNotification({
+        recipient: appointment.patientId.userId,
+        type: 'APPOINTMENT_CONFIRMED',
+        message: `Your appointment on ${appointment.date} at ${appointment.startTime} has been confirmed.`,
+        relatedEntity: {
+          entityType: 'Appointment',
+          entityId: appointment._id,
+        },
+      });
+    }
+
+    return await this.getAppointmentById(appointment._id, requestingUser);
+  }
+
+  /**
+   * Complete an appointment (CONFIRMED -> COMPLETED)
+   * Allowed: Doctor (assigned)
+   */
+  async completeAppointment(appointmentId, requestingUser) {
+    const appointment = await Appointment.findById(appointmentId)
+      .populate('patientId')
+      .populate('doctorId');
+
+    if (!appointment) {
+      throw AppError.notFound(`Appointment not found with ID: ${appointmentId}`, 'NOT_FOUND');
+    }
+
+    // Role authorization: Only assigned Doctor (or Admin)
+    if (requestingUser.role === 'DOCTOR') {
+      const doctor = await Doctor.findOne({ userId: requestingUser._id });
+      if (!doctor || appointment.doctorId._id.toString() !== doctor._id.toString()) {
+        throw AppError.forbidden('You can only complete appointments assigned to you', 'FORBIDDEN');
+      }
+    } else if (requestingUser.role !== 'ADMIN') {
+      throw AppError.forbidden('Only the assigned doctor can mark an appointment as completed', 'FORBIDDEN');
+    }
+
+    // State machine check: CONFIRMED -> COMPLETED
+    if (appointment.status !== 'CONFIRMED') {
+      throw AppError.badRequest(
+        `Cannot complete appointment with status '${appointment.status}'. Only CONFIRMED appointments can be completed.`,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
+    appointment.status = 'COMPLETED';
+    await appointment.save();
+
+    // Notify patient
+    if (appointment.patientId && appointment.patientId.userId) {
+      await notificationService.createNotification({
+        recipient: appointment.patientId.userId,
+        type: 'APPOINTMENT_COMPLETED',
+        message: `Your consultation on ${appointment.date} has been marked completed. Thank you!`,
+        relatedEntity: {
+          entityType: 'Appointment',
+          entityId: appointment._id,
+        },
+      });
+    }
+
+    return await this.getAppointmentById(appointment._id, requestingUser);
+  }
+
+  /**
+   * Mark appointment as NO_SHOW (CONFIRMED -> NO_SHOW)
+   * Allowed: Doctor (assigned), Admin, Receptionist
+   */
+  async markNoShow(appointmentId, requestingUser) {
+    const appointment = await Appointment.findById(appointmentId)
+      .populate('patientId')
+      .populate('doctorId');
+
+    if (!appointment) {
+      throw AppError.notFound(`Appointment not found with ID: ${appointmentId}`, 'NOT_FOUND');
+    }
+
+    // Role authorization
+    if (requestingUser.role === 'DOCTOR') {
+      const doctor = await Doctor.findOne({ userId: requestingUser._id });
+      if (!doctor || appointment.doctorId._id.toString() !== doctor._id.toString()) {
+        throw AppError.forbidden('You can only update appointments assigned to you', 'FORBIDDEN');
+      }
+    } else if (!['ADMIN', 'RECEPTIONIST'].includes(requestingUser.role)) {
+      throw AppError.forbidden('Only assigned doctors or administrative staff can record a no-show', 'FORBIDDEN');
+    }
+
+    // State machine check: CONFIRMED -> NO_SHOW
+    if (appointment.status !== 'CONFIRMED') {
+      throw AppError.badRequest(
+        `Cannot mark as NO_SHOW for appointment with status '${appointment.status}'. Only CONFIRMED appointments can transition to NO_SHOW.`,
+        'INVALID_STATUS_TRANSITION'
+      );
+    }
+
+    appointment.status = 'NO_SHOW';
+    appointment.slotKey = null; // Free slot
+    await appointment.save();
+
+    // Notify patient
+    if (appointment.patientId && appointment.patientId.userId) {
+      await notificationService.createNotification({
+        recipient: appointment.patientId.userId,
+        type: 'APPOINTMENT_NO_SHOW',
+        message: `You were marked as no-show for your appointment on ${appointment.date} at ${appointment.startTime}.`,
+        relatedEntity: {
+          entityType: 'Appointment',
+          entityId: appointment._id,
+        },
+      });
+    }
+
+    return await this.getAppointmentById(appointment._id, requestingUser);
+  }
+
+  /**
+   * Cancel an appointment (BOOKED / CONFIRMED -> CANCELLED)
+   */
+  async cancelAppointment(appointmentId, reason, requestingUser) {
+    const appointment = await Appointment.findById(appointmentId)
+      .populate('patientId')
+      .populate('doctorId');
+
+    if (!appointment) {
+      throw AppError.notFound(`Appointment not found with ID: ${appointmentId}`, 'NOT_FOUND');
+    }
+
+    let isCancelledByPatient = false;
+
     // Verify ownership
     if (requestingUser.role === 'PATIENT') {
       const patient = await Patient.findOne({ userId: requestingUser._id });
-      if (!patient || appointment.patientId.toString() !== patient._id.toString()) {
+      if (!patient || appointment.patientId._id.toString() !== patient._id.toString()) {
         throw AppError.forbidden('You can only cancel your own appointments', 'FORBIDDEN');
       }
+      isCancelledByPatient = true;
     } else if (requestingUser.role === 'DOCTOR') {
       const doctor = await Doctor.findOne({ userId: requestingUser._id });
-      if (!doctor || appointment.doctorId.toString() !== doctor._id.toString()) {
+      if (!doctor || appointment.doctorId._id.toString() !== doctor._id.toString()) {
         throw AppError.forbidden('You can only cancel appointments assigned to you', 'FORBIDDEN');
       }
     }
@@ -288,20 +476,36 @@ class AppointmentService {
 
     await appointment.save();
 
-    return await appointment.populate([
-      {
-        path: 'patientId',
-        populate: { path: 'userId', select: 'name email phone' },
-      },
-      {
-        path: 'doctorId',
-        populate: [
-          { path: 'userId', select: 'name email phone' },
-          { path: 'departmentId', select: 'name description' },
-        ],
-      },
-      { path: 'departmentId', select: 'name description' },
-    ]);
+    // Send notifications to the affected parties
+    if (isCancelledByPatient) {
+      // Notify doctor
+      if (appointment.doctorId && appointment.doctorId.userId) {
+        await notificationService.createNotification({
+          recipient: appointment.doctorId.userId,
+          type: 'APPOINTMENT_CANCELLED',
+          message: `Appointment on ${appointment.date} at ${appointment.startTime} was cancelled by the patient. Reason: ${appointment.cancelledReason}`,
+          relatedEntity: {
+            entityType: 'Appointment',
+            entityId: appointment._id,
+          },
+        });
+      }
+    } else {
+      // Cancelled by Doctor or Admin -> Notify patient
+      if (appointment.patientId && appointment.patientId.userId) {
+        await notificationService.createNotification({
+          recipient: appointment.patientId.userId,
+          type: 'APPOINTMENT_CANCELLED',
+          message: `Your appointment on ${appointment.date} at ${appointment.startTime} was cancelled. Reason: ${appointment.cancelledReason}`,
+          relatedEntity: {
+            entityType: 'Appointment',
+            entityId: appointment._id,
+          },
+        });
+      }
+    }
+
+    return await this.getAppointmentById(appointment._id, requestingUser);
   }
 }
 
