@@ -10,6 +10,8 @@ const prescriptionRoutes = require('./prescription.routes');
 const medicalHistoryRoutes = require('./medicalHistory.routes');
 const directoryRoutes = require('./directory.routes');
 const notificationRoutes = require('./notification.routes');
+const billingRoutes = require('./billing.routes');
+const analyticsRoutes = require('./analytics.routes');
 
 // API Index endpoint
 router.get('/', (req, res) => {
@@ -30,6 +32,8 @@ router.get('/', (req, res) => {
       prescriptions: '/api/v1/prescriptions',
       medicalHistory: '/api/v1/medical-history/me',
       notifications: '/api/v1/notifications',
+      billing: '/api/v1/billing',
+      analytics: '/api/v1/analytics/dashboard-summary',
     },
     timestamp: new Date().toISOString(),
   });
@@ -56,5 +60,9 @@ router.use('/prescriptions', prescriptionRoutes);
 router.use('/medical-history', medicalHistoryRoutes);
 router.use('/directory', directoryRoutes);
 router.use('/notifications', notificationRoutes);
+
+// Member 3 / Member 4 Integration Routes
+router.use('/billing', billingRoutes);
+router.use('/analytics', analyticsRoutes);
 
 module.exports = router;

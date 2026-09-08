@@ -7,6 +7,10 @@ const Patient = require('../src/models/Patient');
 const Department = require('../src/models/Department');
 const Doctor = require('../src/models/Doctor');
 const DoctorAvailability = require('../src/models/DoctorAvailability');
+const Appointment = require('../src/models/Appointment');
+const Prescription = require('../src/models/Prescription');
+const Notification = require('../src/models/Notification');
+const Invoice = require('../src/models/Invoice');
 const { formatDateYYYYMMDD } = require('../src/utils/timeUtils');
 
 const startDevMemoryServer = async () => {
@@ -126,6 +130,84 @@ const startDevMemoryServer = async () => {
         });
       }
     }
+
+    // Seed Completed Appointment, Prescription & Paid Invoice for John Doe
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = formatDateYYYYMMDD(yesterday);
+
+    const completedAppt = await Appointment.create({
+      patientId: (await Patient.findOne({ userId: pUser1._id }))._id,
+      doctorId: doc1._id,
+      departmentId: deptMap['Cardiology'],
+      date: yesterdayStr,
+      startTime: '10:00',
+      endTime: '10:30',
+      status: 'COMPLETED',
+      reason: 'Hypertension checkup and routine consultation',
+      notes: 'Patient responded well to medications. Vitals stable.',
+    });
+
+    const seededPrescription = await Prescription.create({
+      appointmentId: completedAppt._id,
+      doctorId: doc1._id,
+      patientId: completedAppt.patientId,
+      diagnosis: 'Essential Hypertension',
+      items: [
+        {
+          medicine: 'Amlodipine Besylate',
+          dosage: '5mg',
+          frequency: 'Once daily in the morning',
+          duration: '30 days',
+          instructions: 'Take with or without food',
+        },
+      ],
+      generalAdvice: 'Low-sodium diet and regular morning BP tracking.',
+    });
+
+    const seededInvoice = await Invoice.create({
+      invoiceNumber: 'INV-DEMO-001',
+      appointmentId: completedAppt._id,
+      patientId: completedAppt.patientId,
+      doctorId: doc1._id,
+      lineItems: [
+        {
+          description: 'Cardiology Consultation',
+          amount: 150,
+          quantity: 1,
+        },
+      ],
+      subtotal: 150,
+      discount: 0,
+      tax: 0,
+      total: 150,
+      paymentStatus: 'PAID',
+      paidAt: yesterday,
+      paymentMethod: 'ONLINE_SIMULATION',
+    });
+
+    await Notification.create([
+      {
+        recipient: pUser1._id,
+        type: 'PRESCRIPTION_AVAILABLE',
+        message: 'Dr. Sarah Smith has uploaded your prescription.',
+        relatedEntity: {
+          entityType: 'Prescription',
+          entityId: seededPrescription._id,
+        },
+        isRead: false,
+      },
+      {
+        recipient: pUser1._id,
+        type: 'BILLING_EVENT',
+        message: 'Invoice INV-DEMO-001 for $150 was marked PAID.',
+        relatedEntity: {
+          entityType: 'Invoice',
+          entityId: seededInvoice._id,
+        },
+        isRead: true,
+      },
+    ]);
 
     const server = app.listen(PORT, () => {
       console.log(`=========================================`);

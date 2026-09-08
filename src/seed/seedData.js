@@ -6,6 +6,9 @@ const Department = require('../models/Department');
 const Doctor = require('../models/Doctor');
 const DoctorAvailability = require('../models/DoctorAvailability');
 const Appointment = require('../models/Appointment');
+const Prescription = require('../models/Prescription');
+const Notification = require('../models/Notification');
+const Invoice = require('../models/Invoice');
 const { connectDB, disconnectDB } = require('../config/db');
 const { formatDateYYYYMMDD } = require('../utils/timeUtils');
 
@@ -23,6 +26,9 @@ const seedDatabase = async () => {
     await Doctor.deleteMany({});
     await DoctorAvailability.deleteMany({});
     await Appointment.deleteMany({});
+    await Prescription.deleteMany({});
+    await Notification.deleteMany({});
+    await Invoice.deleteMany({});
 
     console.log('[Seed] Creating Departments...');
     const departments = await Department.create([
@@ -221,6 +227,162 @@ const seedDatabase = async () => {
         });
       }
     }
+
+    console.log('[Seed] Creating Sample Completed Appointment, Prescription & Invoice...');
+    const yesterday = new Date();
+    yesterday.setDate(today.getDate() - 1);
+    const yesterdayStr = formatDateYYYYMMDD(yesterday);
+
+    // Completed appointment for Patient 1 with Doctor 1
+    const completedAppt = await Appointment.create({
+      patientId: patient1._id,
+      doctorId: doctor1._id,
+      departmentId: deptMap['Cardiology'],
+      date: yesterdayStr,
+      startTime: '10:00',
+      endTime: '10:30',
+      status: 'COMPLETED',
+      reason: 'Routine hypertension follow-up and chest tightness evaluation',
+      notes: 'Blood pressure stable at 128/82. Advised to continue lifestyle modifications.',
+      slotKey: null,
+    });
+
+    // Seed Prescription for completed appointment
+    const seededPrescription = await Prescription.create({
+      appointmentId: completedAppt._id,
+      doctorId: doctor1._id,
+      patientId: patient1._id,
+      diagnosis: 'Essential Hypertension (Well Controlled)',
+      items: [
+        {
+          medicine: 'Amlodipine Besylate',
+          dosage: '5mg',
+          frequency: 'Once daily in the morning',
+          duration: '30 days',
+          instructions: 'Take with or without food. Monitor morning BP.',
+        },
+        {
+          medicine: 'Atorvastatin',
+          dosage: '20mg',
+          frequency: 'Once daily at bedtime',
+          duration: '30 days',
+          instructions: 'Cardioprotective lipid management.',
+        },
+      ],
+      generalAdvice: 'Reduce daily sodium intake to under 2g. Moderate aerobic exercise 30 min/day.',
+      followUpDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      isActive: true,
+    });
+
+    // Seed Invoice for completed appointment
+    const seededInvoice = await Invoice.create({
+      invoiceNumber: 'INV-DEMO-001',
+      appointmentId: completedAppt._id,
+      patientId: patient1._id,
+      doctorId: doctor1._id,
+      lineItems: [
+        {
+          description: 'Specialist Consultation Fee (Interventional Cardiology)',
+          amount: 150,
+          quantity: 1,
+        },
+        {
+          description: '12-Lead Electrocardiogram (ECG) Diagnostic',
+          amount: 50,
+          quantity: 1,
+        },
+      ],
+      subtotal: 200,
+      discount: 0,
+      tax: 0,
+      total: 200,
+      paymentStatus: 'PAID',
+      paidAt: yesterday,
+      paymentMethod: 'ONLINE_SIMULATION',
+      notes: 'Paid at front desk via online settlement simulation.',
+    });
+
+    // Upcoming Booked appointment for Patient 2 with Doctor 2
+    const tomorrow = new Date();
+    tomorrow.setDate(today.getDate() + 1);
+    const tomorrowStr = formatDateYYYYMMDD(tomorrow);
+
+    const bookedAppt = await Appointment.create({
+      patientId: patient2._id,
+      doctorId: doctor2._id,
+      departmentId: deptMap['Neurology'],
+      date: tomorrowStr,
+      startTime: '11:00',
+      endTime: '11:30',
+      status: 'BOOKED',
+      reason: 'Frequent migraines and light sensitivity',
+      slotKey: `${doctor2._id}_${tomorrowStr}_11:00`,
+    });
+
+    // Seed Pending Invoice for upcoming appointment
+    await Invoice.create({
+      invoiceNumber: 'INV-DEMO-002',
+      appointmentId: bookedAppt._id,
+      patientId: patient2._id,
+      doctorId: doctor2._id,
+      lineItems: [
+        {
+          description: 'Specialist Consultation Fee (Clinical Neurophysiology)',
+          amount: 140,
+          quantity: 1,
+        },
+      ],
+      subtotal: 140,
+      discount: 0,
+      tax: 0,
+      total: 140,
+      paymentStatus: 'PENDING',
+      notes: 'Scheduled for payment upon appointment check-in.',
+    });
+
+    console.log('[Seed] Creating Seed Notifications...');
+    await Notification.create([
+      {
+        recipient: patientUser1._id,
+        type: 'PRESCRIPTION_AVAILABLE',
+        message: 'Dr. Sarah Smith has issued your prescription for consultation on ' + yesterdayStr + '.',
+        relatedEntity: {
+          entityType: 'Prescription',
+          entityId: seededPrescription._id,
+        },
+        isRead: false,
+      },
+      {
+        recipient: patientUser1._id,
+        type: 'BILLING_EVENT',
+        message: 'Invoice INV-DEMO-001 for $200 has been marked as PAID.',
+        relatedEntity: {
+          entityType: 'Invoice',
+          entityId: seededInvoice._id,
+        },
+        isRead: true,
+      },
+      {
+        recipient: patientUser2._id,
+        type: 'APPOINTMENT_CREATED',
+        message: 'Your appointment with Dr. David Jones on ' + tomorrowStr + ' at 11:00 is scheduled.',
+        relatedEntity: {
+          entityType: 'Appointment',
+          entityId: bookedAppt._id,
+        },
+        isRead: false,
+      },
+      {
+        recipient: docUser2._id,
+        type: 'APPOINTMENT_CREATED',
+        message: 'Jane Smith booked a consultation for ' + tomorrowStr + ' at 11:00.',
+        relatedEntity: {
+          entityType: 'Appointment',
+          entityId: bookedAppt._id,
+        },
+        isRead: false,
+      },
+    ]);
 
     console.log('====================================================');
     console.log(' SEEDING COMPLETED SUCCESSFULLY!');
