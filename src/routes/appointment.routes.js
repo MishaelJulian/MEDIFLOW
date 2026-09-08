@@ -37,6 +37,30 @@ router.get(
   appointmentController.getAppointmentById
 );
 
+// Confirm appointment (BOOKED -> CONFIRMED)
+router.patch(
+  '/:id/confirm',
+  appointmentIdParamValidator,
+  validate,
+  appointmentController.confirmAppointment
+);
+
+// Complete appointment (CONFIRMED -> COMPLETED)
+router.patch(
+  '/:id/complete',
+  appointmentIdParamValidator,
+  validate,
+  appointmentController.completeAppointment
+);
+
+// Mark appointment as NO_SHOW (CONFIRMED -> NO_SHOW)
+router.patch(
+  '/:id/no-show',
+  appointmentIdParamValidator,
+  validate,
+  appointmentController.markNoShow
+);
+
 // Cancel appointment
 router.patch(
   '/:id/cancel',
