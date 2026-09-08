@@ -40,6 +40,9 @@ app.get('/', (req, res) => {
   });
 });
 
+// Favicon handler
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+
 // Handle 404 Unmatched Routes
 app.all('*', (req, res, next) => {
   next(AppError.notFound(`Cannot find endpoint ${req.method} ${req.originalUrl} on this server`));

@@ -11,6 +11,30 @@ const medicalHistoryRoutes = require('./medicalHistory.routes');
 const directoryRoutes = require('./directory.routes');
 const notificationRoutes = require('./notification.routes');
 
+// API Index endpoint
+router.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'MediFlow API v1 is active and healthy',
+    endpoints: {
+      health: '/api/v1/health',
+      departments: '/api/v1/departments',
+      doctors: '/api/v1/doctors',
+      doctorDirectory: '/api/v1/directory/doctors',
+      departmentDirectory: '/api/v1/directory/departments',
+      auth: {
+        login: 'POST /api/v1/auth/login',
+        register: 'POST /api/v1/auth/register',
+      },
+      appointments: '/api/v1/appointments',
+      prescriptions: '/api/v1/prescriptions',
+      medicalHistory: '/api/v1/medical-history/me',
+      notifications: '/api/v1/notifications',
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Healthcheck endpoint
 router.get('/health', (req, res) => {
   res.status(200).json({
