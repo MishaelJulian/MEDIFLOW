@@ -256,7 +256,72 @@ Time:        ~100 s
 
 ---
 
-## 8. Demo Accounts & Evaluation Walkthrough
+## 8. System Screenshots & User Interface Walkthrough
+
+### 8.1 Authentication & Fast-Switch Evaluation Portal
+The landing screen provides secure patient sign-up and login alongside an evaluator Fast-Switcher bar for instantaneous role switching.
+
+![Figure 1: MediFlow Authentication & Demo Landing Portal](docs/screenshots/01_login_page.png)
+
+---
+
+### 8.2 Patient Dashboard (John Doe)
+Displays active appointments, past consultation history, unread notification counts, and one-click quick actions.
+
+![Figure 2: Patient Interactive Dashboard](docs/screenshots/02_patient_dashboard.png)
+
+---
+
+### 8.3 Medical Specialists & Department Directory
+Lists 12 accredited hospital specialists across 6 departments with real-time specialization tags, biographies, experience, and consultation fees in Indian Rupees (`₹`).
+
+![Figure 3: Medical Specialists Directory & Multi-Attribute Search](docs/screenshots/03_doctors_directory.png)
+
+---
+
+### 8.4 Doctor Availability & 7-Day Shift Booking Grid
+Visualizes morning and afternoon shift windows with 30-minute interactive booking slots and concurrency conflict detection.
+
+![Figure 4: Doctor Availability Schedule & Slot Booking Interface](docs/screenshots/04_doctor_availability.png)
+
+---
+
+### 8.5 Billing & Invoices Management
+Itemized breakdown of consultation fees and diagnostics with status badges and simulated one-click online settlement.
+
+![Figure 5: Patient Itemized Billing & Simulated Payment Interface](docs/screenshots/05_billing_invoices.png)
+
+---
+
+### 8.6 Digital Prescription Records
+Chronological list of issued prescriptions with clinical diagnoses, attending physician details, and printable Rx summaries.
+
+![Figure 6: Digital Prescription Management & Medication Directive Records](docs/screenshots/06_prescriptions.png)
+
+---
+
+### 8.7 Doctor Clinical Portal (Dr. Sarah Smith)
+Enables attending physicians to manage assigned appointment queues, confirm visits, record clinical encounter notes, and issue digital prescriptions.
+
+![Figure 7: Doctor Clinical Workflow Portal & Assigned Queue](docs/screenshots/07_doctor_portal.png)
+
+---
+
+### 8.8 Hospital Executive Dashboard & Operational Reports
+Aggregated KPI cards displaying total patients, active doctors, scheduled visits, and settled revenue in `₹` alongside appointment status distributions.
+
+![Figure 8: Administrator Executive KPI Overview & Operational Reports](docs/screenshots/08_admin_dashboard.png)
+
+---
+
+### 8.9 AI Appointment No-Show Risk Engine
+Operational predictive assessment evaluating appointment attendance probability based on booking lead times and historical cancellation ratios.
+
+![Figure 9: AI Appointment No-Show Risk Predictive Assessment Modal](docs/screenshots/09_ai_risk_assessment.png)
+
+---
+
+## 9. Demo Accounts & Evaluation Walkthrough
 
 The web portal (`http://localhost:5000`) includes a **1-Click Demo Fast-Switcher** bar for instant evaluator testing:
 
@@ -278,7 +343,7 @@ The web portal (`http://localhost:5000`) includes a **1-Click Demo Fast-Switcher
 
 ---
 
-## 9. Viva Voce Key Defense Concepts
+## 10. Viva Voce Key Defense Concepts
 
 1. **Why MongoDB?** Flexible document schema perfectly modeling hierarchical clinical encounters (`items[]`, `lineItems[]`) with high read-heavy performance.
 2. **Double-Booking Prevention:** Dual-layered defense: (a) In-memory interval comparison algorithm in service layer, and (b) Database-enforced atomic sparse unique index on `slotKey`.
@@ -287,7 +352,7 @@ The web portal (`http://localhost:5000`) includes a **1-Click Demo Fast-Switcher
 
 ---
 
-## 10. Conclusion
+## 11. Conclusion
 
 MediFlow successfully delivers a complete, fault-tolerant, role-based healthcare management platform meeting all CIA-3 evaluation criteria. The system demonstrates high code quality, robust automated test coverage, thoughtful database modeling, and an intuitive user experience.
 

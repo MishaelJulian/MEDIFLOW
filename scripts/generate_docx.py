@@ -69,6 +69,7 @@ def format_inline_runs(paragraph, text):
 
 def build_docx(md_path, docx_path):
     doc = Document()
+    base_dir = os.path.dirname(os.path.abspath(md_path))
 
     # Set page margins
     sections = doc.sections
@@ -147,7 +148,6 @@ def build_docx(md_path, docx_path):
         p.paragraph_format.space_after = Pt(8)
         p.paragraph_format.line_spacing = 1.1
         
-        # Add code container table
         tbl = doc.add_table(rows=1, cols=1)
         tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
         cell = tbl.rows[0].cells[0]
@@ -196,6 +196,33 @@ def build_docx(md_path, docx_path):
         elif in_table:
             in_table = False
             flush_table()
+
+        # Handle Images ![caption](path)
+        img_match = re.match(r'^!\[(.*?)\]\((.*?)\)$', stripped)
+        if img_match:
+            caption = img_match.group(1)
+            img_rel_path = img_match.group(2)
+            img_full_path = os.path.normpath(os.path.join(base_dir, img_rel_path))
+
+            if os.path.exists(img_full_path):
+                img_p = doc.add_paragraph()
+                img_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                img_p.paragraph_format.space_before = Pt(12)
+                img_p.paragraph_format.space_after = Pt(3)
+                
+                run = img_p.add_run()
+                run.add_picture(img_full_path, width=Inches(5.8))
+
+                if caption:
+                    cap_p = doc.add_paragraph()
+                    cap_p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    cap_p.paragraph_format.space_before = Pt(2)
+                    cap_p.paragraph_format.space_after = Pt(12)
+                    cap_run = cap_p.add_run(caption)
+                    cap_run.font.size = Pt(9.5)
+                    cap_run.font.italic = True
+                    cap_run.font.color.rgb = RGBColor(0x47, 0x55, 0x69)
+            continue
 
         # Horizontal rule
         if stripped in ['---', '***', '___']:
@@ -263,8 +290,13 @@ def build_docx(md_path, docx_path):
     if in_code_block:
         flush_code_block()
 
-    doc.save(docx_path)
-    print(f"Successfully generated {docx_path}")
+    try:
+        doc.save(docx_path)
+        print(f"Successfully generated {docx_path}")
+    except PermissionError:
+        alt_path = docx_path.replace('.docx', '_FINAL.docx')
+        doc.save(alt_path)
+        print(f"Original file was open in Word; successfully generated {alt_path}")
 
 if __name__ == '__main__':
     md_file = os.path.join(os.path.dirname(__file__), '..', 'REPORT.md')
