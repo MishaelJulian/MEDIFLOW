@@ -652,7 +652,7 @@ class App {
             ${this.escapeHtml(bio)}
           </p>
           <div style="font-size:0.85rem; margin-bottom:1rem;">
-            <span>Fee: <strong>$${fee}</strong></span> &bull;
+            <span>Fee: <strong>₹${fee}</strong></span> &bull;
             <span>Experience: <strong>${exp}+ yrs</strong></span>
           </div>
         </div>
@@ -1383,7 +1383,7 @@ class App {
                         ${inv.patientId?.userId?.name ? `Patient: ${this.escapeHtml(inv.patientId.userId.name)}<br/>` : ''}
                         <small style="color:var(--text-muted);">Dr. ${this.escapeHtml(inv.doctorId?.userId?.name || 'Physician')}</small>
                       </td>
-                      <td><strong>$${inv.total}</strong></td>
+                      <td><strong>₹${inv.total}</strong></td>
                       <td><span class="badge badge-${inv.paymentStatus}">${inv.paymentStatus}</span></td>
                       <td>
                         ${
@@ -1461,7 +1461,7 @@ class App {
           <div class="stat-card">
             <div class="stat-icon">💵</div>
             <div>
-              <div class="stat-value">$${s.totalRevenue}</div>
+              <div class="stat-value">₹${s.totalRevenue}</div>
               <div class="stat-label">Settled Revenue</div>
             </div>
           </div>

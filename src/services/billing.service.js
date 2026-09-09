@@ -59,7 +59,7 @@ class BillingService {
         await Notification.create({
           recipient: appointment.patientId.userId,
           type: 'BILLING_EVENT',
-          message: `Invoice ${invoiceNumber} for $${total} has been generated for your visit.`,
+          message: `Invoice ${invoiceNumber} for ₹${total} has been generated for your visit.`,
           relatedEntity: {
             entityType: 'Invoice',
             entityId: invoice._id,
@@ -155,7 +155,7 @@ class BillingService {
         await Notification.create({
           recipient: invoice.patientId.userId,
           type: 'BILLING_EVENT',
-          message: `Payment of $${invoice.total} for Invoice ${invoice.invoiceNumber} was successful.`,
+          message: `Payment of ₹${invoice.total} for Invoice ${invoice.invoiceNumber} was successful.`,
           relatedEntity: {
             entityType: 'Invoice',
             entityId: invoice._id,
