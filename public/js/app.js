@@ -597,32 +597,42 @@ class App {
 
     return doctors
       .map(
-        (doc) => `
+        (doc) => {
+          const docId = doc.doctorId || doc._id;
+          const docName = doc.name || doc.userId?.name || 'Specialist';
+          const deptName = doc.department?.name || doc.departmentId?.name || 'Department';
+          const specialization = doc.specialization || 'Clinical Care';
+          const fee = doc.consultationFee || 100;
+          const exp = doc.experienceYears || 5;
+          const bio = doc.bio || 'Experienced hospital clinical specialist providing tailored treatments.';
+
+          return `
       <div class="card" style="display:flex; flex-direction:column; justify-content:space-between; margin-bottom:0;">
         <div>
           <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:0.75rem;">
             <div class="stat-icon" style="width:40px; height:40px; font-size:1.2rem;">👨‍⚕️</div>
             <div>
-              <h3 style="font-size:1.1rem; font-weight:600;">Dr. ${this.escapeHtml(doc.userId?.name || 'Specialist')}</h3>
-              <span class="role-tag DOCTOR">${this.escapeHtml(doc.departmentId?.name || 'Department')}</span>
+              <h3 style="font-size:1.1rem; font-weight:600;">Dr. ${this.escapeHtml(docName)}</h3>
+              <span class="role-tag DOCTOR">${this.escapeHtml(deptName)}</span>
             </div>
           </div>
           <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.5rem;">
-            <strong>Specialization:</strong> ${this.escapeHtml(doc.specialization || 'Clinical Care')}
+            <strong>Specialization:</strong> ${this.escapeHtml(specialization)}
           </p>
           <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:0.75rem; line-height:1.4;">
-            ${this.escapeHtml(doc.bio || 'Experienced hospital clinical specialist providing tailored treatments.')}
+            ${this.escapeHtml(bio)}
           </p>
           <div style="font-size:0.85rem; margin-bottom:1rem;">
-            <span>Fee: <strong>$${doc.consultationFee || 100}</strong></span> &bull;
-            <span>Experience: <strong>${doc.experienceYears || 5}+ yrs</strong></span>
+            <span>Fee: <strong>$${fee}</strong></span> &bull;
+            <span>Experience: <strong>${exp}+ yrs</strong></span>
           </div>
         </div>
-        <button class="btn btn-primary" style="width:100%;" onclick="app.navigate('availability', '${doc._id}')">
+        <button class="btn btn-primary" style="width:100%;" onclick="app.navigate('availability', '${docId}')">
           🗓️ View Availability & Book
         </button>
       </div>
-    `
+    `;
+        }
       )
       .join('');
   }
@@ -633,10 +643,12 @@ class App {
     const grid = document.getElementById('doctorsGrid');
 
     const filtered = (window.loadedDoctors || []).filter((doc) => {
-      const nameMatch = (doc.userId?.name || '').toLowerCase().includes(term);
-      const specMatch = (doc.specialization || '').toLowerCase().includes(term);
-      const deptMatch = !dept || doc.departmentId?.name === dept;
-      return (nameMatch || specMatch) && deptMatch;
+      const docName = (doc.name || doc.userId?.name || '').toLowerCase();
+      const spec = (doc.specialization || '').toLowerCase();
+      const docDept = doc.department?.name || doc.departmentId?.name || '';
+      const nameMatch = docName.includes(term) || spec.includes(term);
+      const deptMatch = !dept || docDept.toLowerCase() === dept.toLowerCase();
+      return nameMatch && deptMatch;
     });
 
     grid.innerHTML = this.renderDoctorCards(filtered);
@@ -651,14 +663,17 @@ class App {
       const today = new Date().toISOString().slice(0, 10);
       const availabilitySlots = await api.getDoctorAvailability(doctorId);
       const doctors = await api.getDoctors();
-      const doctor = doctors.find((d) => d._id === doctorId);
+      const doctor = doctors.find((d) => (d.doctorId || d._id) === doctorId || String(d.doctorId || d._id) === String(doctorId));
+      const doctorName = doctor?.name || doctor?.userId?.name || 'Specialist';
+      const departmentName = doctor?.department?.name || doctor?.departmentId?.name || '';
+      const departmentId = doctor?.department?.id || doctor?.department?._id || doctor?.departmentId?._id || doctor?.departmentId || '';
 
       appContainer.innerHTML = `
         <div style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
           <div>
             <h1 style="font-size: 1.6rem; font-weight: 700;">Doctor Availability & Schedule</h1>
             <p style="color: var(--text-muted);">
-              Dr. ${this.escapeHtml(doctor?.userId?.name || 'Specialist')} &bull; ${this.escapeHtml(doctor?.departmentId?.name || '')}
+              Dr. ${this.escapeHtml(doctorName)} ${departmentName ? `&bull; ${this.escapeHtml(departmentName)}` : ''}
             </p>
           </div>
           <a href="#doctors" class="btn btn-secondary">← Back to Directory</a>
@@ -688,7 +703,7 @@ class App {
                         </div>
                       </div>
                       <div class="slot-grid">
-                        ${this.generateTimeSlots(slot.date, slot.startTime, slot.endTime, slot.slotDuration || 30, isPast, doctorId, doctor?.departmentId?._id)}
+                        ${this.generateTimeSlots(slot.date, slot.startTime, slot.endTime, slot.slotDuration || 30, isPast, doctorId, departmentId)}
                       </div>
                     </div>
                   `;
