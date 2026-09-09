@@ -188,6 +188,14 @@ class AppointmentService {
         });
       }
 
+      // Auto-generate consultation fee invoice
+      try {
+        const billingService = require('./billing.service');
+        await billingService.createInvoice({ appointmentId: appointment._id });
+      } catch (invoiceErr) {
+        console.warn('[AppointmentService] Auto invoice generation notice:', invoiceErr.message);
+      }
+
       return populatedAppointment;
     } catch (err) {
       if (err.code === 11000) {
