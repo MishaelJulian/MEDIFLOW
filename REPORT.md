@@ -16,10 +16,10 @@
 
 | S.No | Student Name | Roll Number | Department | Section | Project Role & Domain Ownership |
 |---|---|---|---|---|---|
-| 1 | **Mishael Julian** *(Lead)* | 2462181 | Artificial Intelligence and Data Science Engineering | A | **Sprint 1:** Modules M01–M04 (Auth, Doctor Profiles, Availability, Booking Engine) |
+| 1 | **Mishael Julian** *(Lead)* | 2462184 | Artificial Intelligence and Data Science Engineering | A | **Sprint 1:** Modules M01–M04 (Auth, Doctor Profiles, Availability, Booking Engine) |
 | 2 | **Nevan Miranda** | 2462120 | Artificial Intelligence and Data Science Engineering | A | **Sprint 2:** Modules M05–M09 (Workflow State Machine, Prescriptions, Medical History, Directory, Notifications) |
 | 3 | **Mervin A** | 2462113 | Artificial Intelligence and Data Science Engineering | A | **Sprint 3:** Modules M10–M13 (Billing & Invoices, Search, Admin Controls, Reports & Dashboards) |
-| 4 | **Lijo Paul** | 2462113 | Artificial Intelligence and Data Science Engineering | A | **Sprint 4:** Modules M14–M16 (Automated Testing QA, AI No-Show Analytics, Frontend SPA Integration) |
+| 4 | **Lijo Paul** | 2462110 | Artificial Intelligence and Data Science Engineering | A | **Sprint 4:** Modules M14–M16 (Automated Testing QA, AI No-Show Analytics, Frontend SPA Integration) |
 
 - **GitHub Repository URL:** [https://github.com/MishaelJulian/MEDIFLOW](https://github.com/MishaelJulian/MEDIFLOW)
 - **Repository Visibility:** Public (Fully synchronized and passing all CI tests)

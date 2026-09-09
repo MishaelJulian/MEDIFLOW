@@ -8,10 +8,10 @@
 
 | S.No | Student Name | Roll No. | Department | Section | Domain Ownership |
 |---|---|---|---|---|---|
-| 1 | Mishael Julian (Lead) | 2462181 | Artificial Intelligence and Data Science Engineering | A | Sprint 1: M01–M04 (Auth, Doctors, Availability, Booking Engine) |
+| 1 | Mishael Julian | 2462184 | Artificial Intelligence and Data Science Engineering | A | Sprint 1: M01–M04 (Auth, Doctors, Availability, Booking Engine) |
 | 2 | Nevan Miranda | 2462120 | Artificial Intelligence and Data Science Engineering | A | Sprint 2: M05–M09 (Workflow, Prescriptions, Medical History, Directory, Notifications) |
 | 3 | Mervin A | 2462113 | Artificial Intelligence and Data Science Engineering | A | Sprint 3: M10–M13 (Billing & Invoices, Search, Admin Controls, Reports & Dashboards) |
-| 4 | Lijo Paul | 2462113 | Artificial Intelligence and Data Science Engineering | A | Integration: M14–M16 (Test Suites, AI No-Show Analytics, Frontend, Postman, QA) |
+| 4 | Lijo Paul | 2462110 | Artificial Intelligence and Data Science Engineering | A | Integration: M14–M16 (Test Suites, AI No-Show Analytics, Frontend, Postman, QA) |
 
 - **Project Code & Title:** `P02` — Hospital / Outpatient Appointment & Queue Management System (MediFlow)
 - **Course Name:** Web Application Development / Enterprise Application Engineering
