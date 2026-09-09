@@ -529,20 +529,39 @@ class App {
                 <th>Doctor</th>
                 <th>Status</th>
                 <th>AI No-Show Risk</th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               ${appointments
-                .slice(0, 10)
+                .slice(0, 15)
                 .map(
                   (a) => `
                 <tr>
-                  <td>${a.date} (${a.startTime})</td>
+                  <td><strong>${a.date}</strong><br/><small style="color:var(--text-muted);">${a.startTime} - ${a.endTime}</small></td>
                   <td>${this.escapeHtml(a.patientId?.userId?.name || 'Patient')}</td>
                   <td>Dr. ${this.escapeHtml(a.doctorId?.userId?.name || 'Doctor')}</td>
                   <td><span class="badge badge-${a.status}">${a.status}</span></td>
                   <td>
                     <button class="btn btn-secondary btn-sm" onclick="app.showNoShowRiskModal('${a._id}')">🧠 Evaluate Risk</button>
+                  </td>
+                  <td>
+                    <div style="display:flex; gap:0.35rem; flex-wrap:wrap;">
+                      <button class="btn btn-secondary btn-sm" onclick="app.navigate('appointment', '${a._id}')">Details</button>
+                      ${
+                        a.status === 'BOOKED'
+                          ? `<button class="btn btn-success btn-sm" onclick="app.confirmAppointment('${a._id}')">✅ Confirm</button>`
+                          : ''
+                      }
+                      ${
+                        a.status === 'CONFIRMED'
+                          ? `
+                          <button class="btn btn-primary btn-sm" onclick="app.promptCompleteAppointment('${a._id}')">Complete</button>
+                          <button class="btn btn-danger btn-sm" onclick="app.markNoShow('${a._id}')">No-Show</button>
+                        `
+                          : ''
+                      }
+                    </div>
                   </td>
                 </tr>
               `
@@ -860,10 +879,23 @@ class App {
               ${appt.cancellationReason ? `<tr><td><strong>Cancellation Reason</strong></td><td>${this.escapeHtml(appt.cancellationReason)}</td></tr>` : ''}
             </table>
 
-            <div style="margin-top:1.5rem; display:flex; gap:0.75rem;">
+            <div style="margin-top:1.5rem; display:flex; gap:0.75rem; flex-wrap:wrap;">
               ${
                 appt.status === 'BOOKED' && api.user.role === 'PATIENT'
                   ? `<button class="btn btn-danger" onclick="app.promptCancelAppointment('${appt._id}')">Cancel Appointment</button>`
+                  : ''
+              }
+              ${
+                appt.status === 'BOOKED' && (api.user.role === 'DOCTOR' || api.user.role === 'RECEPTIONIST' || api.user.role === 'ADMIN')
+                  ? `<button class="btn btn-success" onclick="app.confirmAppointment('${appt._id}')">✅ Confirm Appointment</button>`
+                  : ''
+              }
+              ${
+                appt.status === 'CONFIRMED' && (api.user.role === 'DOCTOR' || api.user.role === 'RECEPTIONIST' || api.user.role === 'ADMIN')
+                  ? `
+                  <button class="btn btn-primary" onclick="app.promptCompleteAppointment('${appt._id}')">🩺 Complete Consultation</button>
+                  <button class="btn btn-danger" onclick="app.markNoShow('${appt._id}')">🚫 Mark No-Show</button>
+                `
                   : ''
               }
               ${
