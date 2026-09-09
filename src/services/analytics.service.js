@@ -184,6 +184,228 @@ class AnalyticsService {
       generatedAt: new Date().toISOString(),
     };
   }
+
+  /**
+   * Comprehensive Operational Reports (Admin / Clinic Management)
+   */
+  async getOperationalReports(filters = {}) {
+    const apptFilter = {};
+    if (filters.startDate && filters.endDate) {
+      apptFilter.date = { $gte: filters.startDate, $lte: filters.endDate };
+    } else if (filters.startDate) {
+      apptFilter.date = { $gte: filters.startDate };
+    } else if (filters.endDate) {
+      apptFilter.date = { $lte: filters.endDate };
+    }
+
+    const [appointments, doctors, departments, invoices] = await Promise.all([
+      Appointment.find(apptFilter)
+        .populate('doctorId', 'specialization userId')
+        .populate('departmentId', 'name')
+        .lean(),
+      Doctor.find().populate('userId', 'name email').lean(),
+      Department.find().lean(),
+      Invoice.find().lean(),
+    ]);
+
+    // 1. Appointments per day
+    const perDayMap = {};
+    appointments.forEach((a) => {
+      perDayMap[a.date] = (perDayMap[a.date] || 0) + 1;
+    });
+    const appointmentsPerDay = Object.keys(perDayMap)
+      .sort()
+      .map((date) => ({ date, count: perDayMap[date] }));
+
+    // 2. Appointments by department
+    const deptMap = {};
+    appointments.forEach((a) => {
+      const deptName = a.departmentId?.name || 'Unassigned';
+      deptMap[deptName] = (deptMap[deptName] || 0) + 1;
+    });
+    const appointmentsByDepartment = Object.keys(deptMap).map((dept) => ({
+      department: dept,
+      count: deptMap[dept],
+    }));
+
+    // 3. Status distribution
+    const statusCounts = {
+      BOOKED: 0,
+      CONFIRMED: 0,
+      COMPLETED: 0,
+      CANCELLED: 0,
+      NO_SHOW: 0,
+    };
+    appointments.forEach((a) => {
+      if (statusCounts[a.status] !== undefined) {
+        statusCounts[a.status]++;
+      }
+    });
+
+    // 4. Doctor Workload
+    const doctorWorkloadMap = {};
+    doctors.forEach((d) => {
+      doctorWorkloadMap[d._id.toString()] = {
+        doctorId: d._id,
+        doctorName: d.userId?.name || 'Unknown Doctor',
+        specialization: d.specialization,
+        totalAppointments: 0,
+        completedAppointments: 0,
+      };
+    });
+
+    appointments.forEach((a) => {
+      const dId = a.doctorId?._id ? a.doctorId._id.toString() : a.doctorId?.toString();
+      if (dId && doctorWorkloadMap[dId]) {
+        doctorWorkloadMap[dId].totalAppointments++;
+        if (a.status === 'COMPLETED') {
+          doctorWorkloadMap[dId].completedAppointments++;
+        }
+      }
+    });
+
+    // 5. Financial / Revenue summary
+    let paidTotal = 0;
+    let pendingTotal = 0;
+    let refundedTotal = 0;
+    invoices.forEach((inv) => {
+      if (inv.paymentStatus === 'PAID') {
+        paidTotal += inv.total || 0;
+      } else if (inv.paymentStatus === 'PENDING') {
+        pendingTotal += inv.total || 0;
+      } else if (inv.paymentStatus === 'REFUNDED') {
+        refundedTotal += inv.total || 0;
+      }
+    });
+
+    return {
+      period: {
+        startDate: filters.startDate || 'all',
+        endDate: filters.endDate || 'all',
+      },
+      metrics: {
+        totalAppointments: appointments.length,
+        statusDistribution: statusCounts,
+        appointmentsPerDay,
+        appointmentsByDepartment,
+        doctorWorkload: Object.values(doctorWorkloadMap),
+        revenue: {
+          paid: Math.round(paidTotal * 100) / 100,
+          pending: Math.round(pendingTotal * 100) / 100,
+          refunded: Math.round(refundedTotal * 100) / 100,
+          totalInvoices: invoices.length,
+        },
+      },
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Doctor-Specific Operational Dashboard
+   */
+  async getDoctorDashboardSummary(userId) {
+    const doctor = await Doctor.findOne({ userId }).populate('departmentId');
+    if (!doctor) {
+      throw AppError.notFound('Doctor profile not found for this user');
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const [todayAppointments, upcomingAppointments, completedCount] = await Promise.all([
+      Appointment.find({ doctorId: doctor._id, date: todayStr })
+        .populate({
+          path: 'patientId',
+          populate: { path: 'userId', select: 'name email phone' },
+        })
+        .sort({ startTime: 1 }),
+      Appointment.find({
+        doctorId: doctor._id,
+        date: { $gte: todayStr },
+        status: { $in: ['BOOKED', 'CONFIRMED'] },
+      })
+        .populate({
+          path: 'patientId',
+          populate: { path: 'userId', select: 'name email phone' },
+        })
+        .sort({ date: 1, startTime: 1 })
+        .limit(10),
+      Appointment.countDocuments({ doctorId: doctor._id, status: 'COMPLETED' }),
+    ]);
+
+    return {
+      doctor: {
+        id: doctor._id,
+        specialization: doctor.specialization,
+        department: doctor.departmentId?.name,
+      },
+      todayCount: todayAppointments.length,
+      todayAppointments,
+      upcomingAppointments,
+      completedConsultations: completedCount,
+    };
+  }
+
+  /**
+   * Patient-Specific Operational Dashboard
+   */
+  async getPatientDashboardSummary(userId) {
+    const PatientModel = require('../models/Patient');
+    const PrescriptionModel = require('../models/Prescription');
+    const NotificationModel = require('../models/Notification');
+
+    const patient = await PatientModel.findOne({ userId });
+    if (!patient) {
+      throw AppError.notFound('Patient profile not found for this user');
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    const [nextAppointment, recentPrescriptions, invoices, unreadNotificationsCount] =
+      await Promise.all([
+        Appointment.findOne({
+          patientId: patient._id,
+          date: { $gte: todayStr },
+          status: { $in: ['BOOKED', 'CONFIRMED'] },
+        })
+          .populate({
+            path: 'doctorId',
+            populate: { path: 'userId', select: 'name' },
+          })
+          .populate('departmentId', 'name')
+          .sort({ date: 1, startTime: 1 }),
+        PrescriptionModel.find({ patientId: patient._id })
+          .populate({
+            path: 'doctorId',
+            populate: { path: 'userId', select: 'name' },
+          })
+          .sort({ createdAt: -1 })
+          .limit(5),
+        Invoice.find({ patientId: patient._id }).sort({ createdAt: -1 }),
+        NotificationModel.countDocuments({ recipient: userId, isRead: false }),
+      ]);
+
+    let outstandingBalance = 0;
+    invoices.forEach((inv) => {
+      if (inv.paymentStatus === 'PENDING') {
+        outstandingBalance += inv.total || 0;
+      }
+    });
+
+    return {
+      patient: {
+        id: patient._id,
+        bloodGroup: patient.bloodGroup,
+      },
+      nextAppointment,
+      recentPrescriptions,
+      invoicesSummary: {
+        totalInvoices: invoices.length,
+        unpaidCount: invoices.filter((i) => i.paymentStatus === 'PENDING').length,
+        outstandingBalance: Math.round(outstandingBalance * 100) / 100,
+      },
+      unreadNotificationsCount,
+    };
+  }
 }
 
 module.exports = new AnalyticsService();

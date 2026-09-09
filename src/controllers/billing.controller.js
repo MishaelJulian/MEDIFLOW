@@ -31,10 +31,17 @@ const getAllInvoices = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, 'All invoices retrieved successfully', invoices);
 });
 
+const updateInvoiceStatus = asyncHandler(async (req, res) => {
+  const invoice = await billingService.updateInvoiceStatus(req.params.id, req.body);
+  return sendSuccess(res, 200, 'Invoice status updated successfully', invoice);
+});
+
 module.exports = {
   createInvoice,
   getInvoiceById,
   getMyInvoices,
   payInvoice,
+  updateInvoiceStatus,
   getAllInvoices,
 };
+

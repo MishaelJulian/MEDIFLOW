@@ -73,6 +73,7 @@ describe('AI / Analytics Bonus Module (M15)', () => {
       startTime: '10:00',
       endTime: '10:30',
       status: 'BOOKED',
+      slotKey: `${doctorDoc._id}_2026-11-20_10:00`,
     });
   });
 
@@ -120,7 +121,7 @@ describe('AI / Analytics Bonus Module (M15)', () => {
     });
   });
 
-  describe('GET /api/v1/analytics/dashboard-summary', () => {
+  describe('GET /api/v1/analytics/dashboard-summary & /admin-dashboard', () => {
     it('should retrieve hospital operational analytics for Admin', async () => {
       const res = await request(app)
         .get('/api/v1/analytics/dashboard-summary')
@@ -140,6 +141,55 @@ describe('AI / Analytics Bonus Module (M15)', () => {
         .set('Authorization', `Bearer ${patientToken}`);
 
       expect(res.status).toBe(403);
+    });
+  });
+
+  describe('GET /api/v1/analytics/reports (Operational Reports - M13)', () => {
+    it('should generate comprehensive reports for Admin', async () => {
+      const res = await request(app)
+        .get('/api/v1/analytics/reports')
+        .set('Authorization', `Bearer ${adminToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('metrics');
+      expect(res.body.data.metrics).toHaveProperty('appointmentsPerDay');
+      expect(res.body.data.metrics).toHaveProperty('appointmentsByDepartment');
+      expect(res.body.data.metrics).toHaveProperty('doctorWorkload');
+      expect(res.body.data.metrics).toHaveProperty('revenue');
+    });
+
+    it('should block non-admin from accessing reports', async () => {
+      const res = await request(app)
+        .get('/api/v1/analytics/reports')
+        .set('Authorization', `Bearer ${doctorToken}`);
+
+      expect(res.status).toBe(403);
+    });
+  });
+
+  describe('GET /api/v1/analytics/doctor-dashboard & /patient-dashboard', () => {
+    it('should retrieve doctor-specific dashboard', async () => {
+      const res = await request(app)
+        .get('/api/v1/analytics/doctor-dashboard')
+        .set('Authorization', `Bearer ${doctorToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('todayAppointments');
+      expect(res.body.data).toHaveProperty('upcomingAppointments');
+      expect(res.body.data).toHaveProperty('completedConsultations');
+    });
+
+    it('should retrieve patient-specific dashboard', async () => {
+      const res = await request(app)
+        .get('/api/v1/analytics/patient-dashboard')
+        .set('Authorization', `Bearer ${patientToken}`);
+
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      expect(res.body.data).toHaveProperty('invoicesSummary');
+      expect(res.body.data).toHaveProperty('unreadNotificationsCount');
     });
   });
 });

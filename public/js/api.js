@@ -245,7 +245,7 @@ class ApiClient {
     return res.data;
   }
 
-  // --- Analytics & AI Bonus ---
+  // --- Analytics, Reports & Role Dashboards ---
   async getNoShowRisk(appointmentId) {
     const res = await this.request(`/analytics/no-show-risk/${appointmentId}`);
     return res.data;
@@ -255,7 +255,66 @@ class ApiClient {
     const res = await this.request('/analytics/dashboard-summary');
     return res.data;
   }
+
+  async getAdminDashboard() {
+    const res = await this.request('/analytics/admin-dashboard');
+    return res.data;
+  }
+
+  async getOperationalReports(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/analytics/reports${query ? `?${query}` : ''}`);
+    return res.data;
+  }
+
+  async getDoctorDashboard() {
+    const res = await this.request('/analytics/doctor-dashboard');
+    return res.data;
+  }
+
+  async getPatientDashboard() {
+    const res = await this.request('/analytics/patient-dashboard');
+    return res.data;
+  }
+
+  // --- Admin Controls ---
+  async getAdminUsers(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/admin/users${query ? `?${query}` : ''}`);
+    return res.data;
+  }
+
+  async setAdminUserStatus(id, isActive) {
+    const res = await this.request(`/admin/users/${id}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isActive }),
+    });
+    return res.data;
+  }
+
+  async updateAdminUserRole(id, role) {
+    const res = await this.request(`/admin/users/${id}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+    return res.data;
+  }
+
+  async getAdminAppointments(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    const res = await this.request(`/admin/appointments${query ? `?${query}` : ''}`);
+    return res.data;
+  }
+
+  async overrideAdminAppointment(id, { status, reason, notes }) {
+    const res = await this.request(`/admin/appointments/${id}/override`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status, reason, notes }),
+    });
+    return res.data;
+  }
 }
 
 const api = new ApiClient();
 window.api = api;
+

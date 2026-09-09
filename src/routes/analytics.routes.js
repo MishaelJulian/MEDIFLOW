@@ -21,4 +21,31 @@ router.get(
   analyticsController.getDashboardSummary
 );
 
+router.get(
+  '/admin-dashboard',
+  authorize('ADMIN', 'RECEPTIONIST'),
+  analyticsController.getDashboardSummary
+);
+
+// Comprehensive Operational Reports (Admin)
+router.get(
+  '/reports',
+  authorize('ADMIN'),
+  analyticsController.getReports
+);
+
+// Doctor Dashboard (Doctor only)
+router.get(
+  '/doctor-dashboard',
+  authorize('DOCTOR'),
+  analyticsController.getDoctorDashboard
+);
+
+// Patient Dashboard (Patient only)
+router.get(
+  '/patient-dashboard',
+  authorize('PATIENT'),
+  analyticsController.getPatientDashboard
+);
+
 module.exports = router;

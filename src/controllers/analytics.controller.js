@@ -12,7 +12,26 @@ const getDashboardSummary = asyncHandler(async (req, res) => {
   return sendSuccess(res, 200, 'Hospital operational analytics retrieved successfully', summary);
 });
 
+const getReports = asyncHandler(async (req, res) => {
+  const reports = await analyticsService.getOperationalReports(req.query);
+  return sendSuccess(res, 200, 'Operational reports generated successfully', reports);
+});
+
+const getDoctorDashboard = asyncHandler(async (req, res) => {
+  const summary = await analyticsService.getDoctorDashboardSummary(req.user._id);
+  return sendSuccess(res, 200, 'Doctor operational dashboard retrieved successfully', summary);
+});
+
+const getPatientDashboard = asyncHandler(async (req, res) => {
+  const summary = await analyticsService.getPatientDashboardSummary(req.user._id);
+  return sendSuccess(res, 200, 'Patient operational dashboard retrieved successfully', summary);
+});
+
 module.exports = {
   getNoShowRisk,
   getDashboardSummary,
+  getReports,
+  getDoctorDashboard,
+  getPatientDashboard,
 };
+

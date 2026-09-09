@@ -170,6 +170,47 @@ class BillingService {
   }
 
   /**
+   * Update invoice status (Admin / Receptionist)
+   */
+  async updateInvoiceStatus(invoiceId, { paymentStatus, notes }) {
+    const invoice = await Invoice.findById(invoiceId).populate('patientId');
+    if (!invoice) {
+      throw AppError.notFound('Invoice not found');
+    }
+
+    if (paymentStatus) {
+      invoice.paymentStatus = paymentStatus;
+    }
+    if (notes) {
+      invoice.notes = notes;
+    }
+    if (paymentStatus === 'PAID' && !invoice.paidAt) {
+      invoice.paidAt = new Date();
+    }
+
+    await invoice.save();
+
+    // Send notification for status change
+    try {
+      if (invoice.patientId?.userId) {
+        await Notification.create({
+          recipient: invoice.patientId.userId,
+          type: 'BILLING_EVENT',
+          message: `Invoice ${invoice.invoiceNumber} status has been updated to ${paymentStatus}.`,
+          relatedEntity: {
+            entityType: 'Invoice',
+            entityId: invoice._id,
+          },
+        });
+      }
+    } catch (err) {
+      console.error('[BillingService] Notification creation failed:', err.message);
+    }
+
+    return invoice;
+  }
+
+  /**
    * Query all invoices (Admin / Receptionist)
    */
   async getAllInvoices(query = {}) {
@@ -180,17 +221,20 @@ class BillingService {
     if (query.patientId) {
       filter.patientId = query.patientId;
     }
+    if (query.doctorId) {
+      filter.doctorId = query.doctorId;
+    }
 
     return await Invoice.find(filter)
       .populate({
         path: 'patientId',
-        populate: { path: 'userId', select: 'name email' },
+        populate: { path: 'userId', select: 'name email phone' },
       })
       .populate({
         path: 'doctorId',
-        populate: { path: 'userId', select: 'name' },
+        populate: { path: 'userId', select: 'name email' },
       })
-      .populate('appointmentId', 'date startTime status')
+      .populate('appointmentId', 'date startTime endTime status')
       .sort({ createdAt: -1 });
   }
 }
