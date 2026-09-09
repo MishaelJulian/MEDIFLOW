@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const path = require('path');
 const apiRoutes = require('./routes');
 const errorHandler = require('./middleware/errorHandler');
 const AppError = require('./errors/AppError');
@@ -9,13 +10,21 @@ const AppError = require('./errors/AppError');
 const app = express();
 
 // Security Middlewares
-app.use(helmet());
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 app.use(
   cors({
     origin: process.env.CLIENT_URL || '*',
     credentials: true,
   })
 );
+
+// Static frontend files
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Logging
 if (process.env.NODE_ENV !== 'test') {
