@@ -82,7 +82,12 @@ class App {
   }
 
   navigate(route, param = null) {
-    window.location.hash = param ? `#${route}/${param}` : `#${route}`;
+    const targetHash = param ? `#${route}/${param}` : `#${route}`;
+    if (window.location.hash === targetHash) {
+      this.handleRouting();
+    } else {
+      window.location.hash = targetHash;
+    }
   }
 
   // --- Navigation & Role-Based UI ---
@@ -262,8 +267,11 @@ class App {
     try {
       this.showToast(`Logging in as ${email}...`);
       await api.login(email, password);
-      this.showToast('Switched account successfully', 'success');
+      this.unreadNotifications = await api.getUnreadNotificationCount().catch(() => 0);
+      this.showToast(`Logged in as ${api.user.name} (${api.user.role})`, 'success');
+      this.renderNav();
       this.navigate('dashboard');
+      this.renderDashboardView();
     } catch (err) {
       this.showToast(`Quick login failed: ${err.message}`, 'error');
     }
@@ -271,7 +279,9 @@ class App {
 
   logout() {
     api.clearSession();
+    this.unreadNotifications = 0;
     this.showToast('Logged out');
+    this.renderNav();
     this.navigate('login');
   }
 
