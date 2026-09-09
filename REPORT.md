@@ -1,5 +1,5 @@
 # CHRIST (Deemed to be University), Bangalore
-### School of Engineering & Technology • Department of Computer Science & Engineering
+### School of Engineering & Technology • Department of ADSE
 **5th Semester • Academic Year 2026–2027 • CIA-3 Project Development**
 
 ---
@@ -16,10 +16,10 @@
 
 | S.No | Student Name | Roll Number | Department | Section | Project Role & Domain Ownership |
 |---|---|---|---|---|---|
-| 1 | **Mishael Julian** *(Lead)* | 2240101 | Computer Science & Engineering | A | **Sprint 1:** Modules M01–M04 (Auth, Doctor Profiles, Availability, Booking Engine) |
-| 2 | **Nevan Fernandes** | 2240102 | Computer Science & Engineering | A | **Sprint 2:** Modules M05–M09 (Workflow State Machine, Prescriptions, Medical History, Directory, Notifications) |
-| 3 | **Mervin Paul** | 2240103 | Computer Science & Engineering | A | **Sprint 3:** Modules M10–M13 (Billing & Invoices, Search, Admin Controls, Reports & Dashboards) |
-| 4 | **Lijo Joseph** | 2240104 | Computer Science & Engineering | A | **Sprint 4:** Modules M14–M16 (Automated Testing QA, AI No-Show Analytics, Frontend SPA Integration) |
+| 1 | **Mishael Julian** *(Lead)* | 2462181 | Artificial Intelligence and Data Science Engineering | A | **Sprint 1:** Modules M01–M04 (Auth, Doctor Profiles, Availability, Booking Engine) |
+| 2 | **Nevan Miranda** | 2462120 | Artificial Intelligence and Data Science Engineering | A | **Sprint 2:** Modules M05–M09 (Workflow State Machine, Prescriptions, Medical History, Directory, Notifications) |
+| 3 | **Mervin A** | 2462113 | Artificial Intelligence and Data Science Engineering | A | **Sprint 3:** Modules M10–M13 (Billing & Invoices, Search, Admin Controls, Reports & Dashboards) |
+| 4 | **Lijo Paul** | 2462113 | Artificial Intelligence and Data Science Engineering | A | **Sprint 4:** Modules M14–M16 (Automated Testing QA, AI No-Show Analytics, Frontend SPA Integration) |
 
 - **GitHub Repository URL:** [https://github.com/MishaelJulian/MEDIFLOW](https://github.com/MishaelJulian/MEDIFLOW)
 - **Repository Visibility:** Public (Fully synchronized and passing all CI tests)
@@ -357,4 +357,4 @@ The web portal (`http://localhost:5000`) includes a **1-Click Demo Fast-Switcher
 MediFlow successfully delivers a complete, fault-tolerant, role-based healthcare management platform meeting all CIA-3 evaluation criteria. The system demonstrates high code quality, robust automated test coverage, thoughtful database modeling, and an intuitive user experience.
 
 ---
-*Submitted for CIA-3 Evaluation • Department of Computer Science & Engineering • Christ University*
+*Submitted for CIA-3 Evaluation • Department of ADSE • Christ University*
